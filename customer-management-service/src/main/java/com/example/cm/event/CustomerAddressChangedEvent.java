@@ -4,9 +4,15 @@ import com.example.cm.domain.Address;
 
 public class CustomerAddressChangedEvent extends CustomerManagementEvent {
 
-	public CustomerAddressChangedEvent(String customerId,Address address) {
+	private Address address;
+
+	public CustomerAddressChangedEvent(String customerId, Address address) {
 		super(customerId);
-		// TODO Auto-generated constructor stub
+		this.address = address;
+	}
+
+	public Address getAddress() {
+		return address;
 	}
 
 }

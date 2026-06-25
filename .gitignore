@@ -26,3 +26,4 @@ replay_pid*
 /customer-management-service/.mvn
 /algotrading-service/.mvn
 /customer-events-consumer-python/.idea
+/customer-events-consumer-python/node_modules
