@@ -7,19 +7,20 @@ import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 
-import com.example.algotrading.event.TradeEvent;
+import com.example.algotrading.event.StreamEvent;
 
 import jakarta.annotation.PostConstruct;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
-public class BinanceWebSocketClientService implements WebSocketHandler{
-	
+public class BinanceWebSocketClientService implements WebSocketHandler {
+
 	private final WebSocketClient webSocketClient;
 	private final ObjectMapper objectMapper;
 	private final KafkaTradeEventProducer producer;
-	
-	public BinanceWebSocketClientService(WebSocketClient webSocketClient, ObjectMapper objectMapper, KafkaTradeEventProducer producer) {
+
+	public BinanceWebSocketClientService(WebSocketClient webSocketClient, ObjectMapper objectMapper,
+			KafkaTradeEventProducer producer) {
 		this.webSocketClient = webSocketClient;
 		this.objectMapper = objectMapper;
 		this.producer = producer;
@@ -27,19 +28,24 @@ public class BinanceWebSocketClientService implements WebSocketHandler{
 
 	@PostConstruct
 	public void connect() {
-		webSocketClient.execute(this, "wss://stream.binance.com:9443/ws/btcusdt@trade");
+		var streams = String.join("/", "btcusdt@trade", "ethusdt@trade", "bnbusdt@trade", "solusdt@trade",
+				"xrpusdt@trade", "dogeusdt@trade",  
+				"ltcusdt@trade", "trxusdt@trade");
+		webSocketClient.execute(this, "wss://stream.binance.com:9443/stream?streams=%s".formatted(streams));
 	}
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 		System.err.println("Connected to the binance server!");
-		
+
 	}
 
 	@Override
 	public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
 		var tradeEventAsJson = message.getPayload().toString();
-		var tradeEvent = objectMapper.readValue(tradeEventAsJson, TradeEvent.class);
+		System.out.println(tradeEventAsJson);
+		var streamEvent = objectMapper.readValue(tradeEventAsJson, StreamEvent.class);
+		var tradeEvent = streamEvent.data();
 		System.out.println(tradeEvent);
 		producer.send(tradeEvent);
 	}
@@ -47,13 +53,13 @@ public class BinanceWebSocketClientService implements WebSocketHandler{
 	@Override
 	public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override

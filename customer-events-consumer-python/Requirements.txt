@@ -1,4 +1,4 @@
 pymongo
 websockets
-kafka-python
+confluent-kafka
 pika
