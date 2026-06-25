@@ -28,10 +28,12 @@ public class CustomerService {
 	// @Transactional
 	public ChangeCustomerAddressResponse updateAddress(String customerId,CustomerAddressRequest newAddress) {
 		// Successfully saved to the database
+		// customerId -- database --> Aggregate --> updateAddress() --> update --> database
 		var address = new Address(newAddress.line(), newAddress.city(), newAddress.country());
 		var event = new CustomerAddressChangedEvent(customerId,address);
 		var eventAsJson = objectMapper.writeValueAsString(event);
-		kafkaTemplate.send(customerEventsTopic, customerId, eventAsJson);
+		kafkaTemplate.send(customerEventsTopic, customerId, eventAsJson)
+		             .thenAcceptAsync(System.out::println);
 		return new ChangeCustomerAddressResponse("success");
 	}
 

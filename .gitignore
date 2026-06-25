@@ -24,3 +24,5 @@ hs_err_pid*
 replay_pid*
 /.metadata/
 /customer-management-service/.mvn
+/algotrading-service/.mvn
+/customer-events-consumer-python/.idea
