@@ -492,6 +492,868 @@ Offset       -> consumer reading position
 Replication  -> durability and fault tolerance
 ```
 
+# Apache Kafka Demo Cluster and Event-Driven Modeling Notes
+
+## 1. Demo Cluster Topology
+
+In this demo, we run an Apache Kafka cluster on a single Windows machine. The cluster is designed for educational purposes and simulates a multi-node Kafka deployment by running each Kafka process on a different port.
+
+The cluster consists of:
+
+| Role                  | Number of Nodes | Responsibility                                                    |
+| --------------------- | --------------: | ----------------------------------------------------------------- |
+| Controller            |               3 | Manages Kafka metadata, leader election, and cluster coordination |
+| Broker                |               5 | Stores topic partitions and serves producer/consumer traffic      |
+| Total Kafka Processes |               8 | 3 controllers + 5 brokers                                         |
+
+With 3 controller nodes, the controller quorum can tolerate the failure of 1 controller node:
+
+```text
+n = 3 controllers
+f = 1 tolerated controller failure
+```
+
+This is because a majority of controllers must remain available for the metadata quorum to continue operating.
+
+---
+
+## 2. Kafka Installation
+
+Download Apache Kafka 4.3.0:
+
+```text
+https://www.apache.org/dyn/closer.lua/kafka/4.3.0/kafka_2.13-4.3.0.tgz?action=download
+```
+
+Extract the archive to:
+
+```text
+C:\kafka_2.13-4.3.0
+```
+
+Then open `cmd.exe` and move into the Kafka installation directory:
+
+```cmd
+cd /d C:\kafka_2.13-4.3.0
+```
+
+The `/d` option allows `cd` to change both the directory and the drive.
+
+---
+
+## 3. Demo Scripts
+
+Two scripts are used to prepare and start the local Kafka cluster:
+
+| Script                      | Purpose                                                   |
+| --------------------------- | --------------------------------------------------------- |
+| `prepare-kafka-cluster.cmd` | Creates the configuration files and formats Kafka storage |
+| `start-kafka-demo.cmd`      | Starts 3 controllers and 5 brokers                        |
+
+Copy the scripts into the Kafka installation directory:
+
+```cmd
+copy C:\Users\binku\Downloads\prepare-kafka-cluster.cmd .
+copy C:\Users\binku\Downloads\start-kafka-demo.cmd .
+```
+
+Prepare the cluster:
+
+```cmd
+prepare-kafka-cluster.cmd
+```
+
+Start the cluster:
+
+```cmd
+start-kafka-demo.cmd
+```
+
+The cluster should start 8 separate Kafka processes:
+
+```text
+Controller 3001
+Controller 3002
+Controller 3003
+
+Broker 1
+Broker 2
+Broker 3
+Broker 4
+Broker 5
+```
+
+Each process uses a different port.
+
+---
+
+## 4. Kafka Roles in KRaft Mode
+
+Modern Kafka runs in KRaft mode, where ZooKeeper is no longer required.
+
+Kafka processes may have different roles:
+
+```properties
+process.roles=controller
+```
+
+or:
+
+```properties
+process.roles=broker
+```
+
+A controller node manages metadata. A broker node stores and serves topic partitions.
+
+In a separated production-like topology, controllers and brokers are different processes. In this demo, we simulate that architecture on a single Windows machine.
+
+---
+
+## 5. Broker and Controller Separation
+
+The demo cluster has:
+
+```text
+3 dedicated controllers
+5 dedicated brokers
+```
+
+This is different from a combined-role Kafka node. In this setup:
+
+```text
+Controllers manage the control plane.
+Brokers manage the data plane.
+```
+
+The control plane is responsible for:
+
+```text
+Cluster metadata
+Topic metadata
+Partition leadership
+Broker registration
+Leader election
+```
+
+The data plane is responsible for:
+
+```text
+Receiving records from producers
+Storing topic partitions
+Replicating records
+Serving records to consumers
+```
+
+---
+
+# 6. Domain Modeling and Kafka
+
+## 6.1 Domain Modeling
+
+In Domain-Driven Design, the domain model represents the core business concepts of the system.
+
+Typical tactical DDD building blocks are:
+
+```text
+Aggregate
+Entity
+Value Object
+Domain Event
+Repository
+Domain Service
+```
+
+For example, in a customer management bounded context, `Customer` can be modeled as an aggregate.
+
+```text
+Customer Aggregate
+ ├── CustomerId
+ ├── Name
+ ├── Email
+ ├── AddressList
+ └── PhoneList
+```
+
+The aggregate is the transactional consistency boundary. Business invariants are enforced inside the aggregate.
+
+Example invariants:
+
+```text
+A customer must have a valid identity.
+A customer cannot have more than a certain number of phone numbers.
+A customer address must be valid before it is added.
+A deactivated customer cannot be modified.
+```
+
+---
+
+## 6.2 Aggregate Persistence
+
+An aggregate is usually persisted in a database.
+
+Example:
+
+```text
+Aggregate: Customer
+Persistence: Database
+```
+
+In a traditional CRUD-oriented model, the current state of the customer is stored.
+
+In an event-driven or event-sourced model, changes in the aggregate can also be represented as events.
+
+---
+
+## 6.3 Domain Events
+
+A domain event represents something important that happened in the domain.
+
+Example:
+
+```text
+CustomerAddressChangedEvent
+```
+
+This event means that the customer’s address was changed successfully according to the rules of the domain model.
+
+A domain event should usually be named in the past tense:
+
+```text
+CustomerRegistered
+CustomerAddressChanged
+CustomerPhoneNumberAdded
+CustomerDeactivated
+```
+
+A domain event is not a command. A command asks the system to do something. An event says that something has already happened.
+
+| Concept | Meaning                      | Example                  |
+| ------- | ---------------------------- | ------------------------ |
+| Command | Request to perform an action | `ChangeCustomerAddress`  |
+| Event   | Fact that something happened | `CustomerAddressChanged` |
+
+---
+
+## 6.4 Kafka as Event Storage / Messaging Infrastructure
+
+Domain events can be published to a messaging system such as:
+
+```text
+Apache Kafka
+RabbitMQ
+ActiveMQ
+RocketMQ
+```
+
+In this demo, Kafka is used as the event streaming platform.
+
+Example:
+
+```text
+Customer Aggregate
+      |
+      | emits
+      v
+CustomerAddressChangedEvent
+      |
+      | published to
+      v
+Kafka topic: customer-events
+```
+
+Kafka stores events in durable, ordered logs called topic partitions.
+
+---
+
+# 7. Kafka Topic Design
+
+## 7.1 Topic
+
+For this demo, the main topic is:
+
+```text
+customer-events
+```
+
+This topic stores customer-related domain events.
+
+Example events:
+
+```json
+{
+  "eventId": "evt-1001",
+  "eventType": "CustomerRegistered",
+  "customerId": "cust-123",
+  "occurredAt": "2026-06-25T10:15:00Z",
+  "payload": {
+    "fullName": "Jane Doe",
+    "email": "jane@example.com"
+  }
+}
+```
+
+---
+
+## 7.2 Partitions
+
+The topic has 3 partitions:
+
+```text
+customer-events
+ ├── partition-0
+ ├── partition-1
+ └── partition-2
+```
+
+Partitions allow Kafka to scale horizontally. Each partition is an ordered, append-only log.
+
+Ordering is guaranteed only within a single partition.
+
+Therefore, for customer events, the Kafka message key should usually be the `customerId`.
+
+Example:
+
+```text
+key = customerId
+value = CustomerRegistered event
+```
+
+This ensures that all events for the same customer are routed to the same partition and processed in order.
+
+---
+
+## 7.3 Replication Factor
+
+The topic uses a replication factor of 3:
+
+```text
+replication.factor = 3
+```
+
+This means each partition has 3 replicas distributed across brokers.
+
+One replica is the leader. The others are followers.
+
+Producers and consumers interact with the leader replica. Follower replicas replicate data from the leader.
+
+---
+
+# 8. Example Partition Distribution
+
+## 8.1 Partition 0
+
+```text
+customer-events::partition-0
+
+Leader:   Broker 1
+Replicas: Broker 1, Broker 3, Broker 5
+ISR:      Broker 1, Broker 5
+```
+
+Visual representation:
+
+```text
+Broker 1  -> Leader
+Broker 3  -> Follower
+Broker 5  -> Follower
+```
+
+---
+
+## 8.2 Partition 1
+
+```text
+customer-events::partition-1
+
+Leader:   Broker 2
+Replicas: Broker 2, Broker 4, Broker 5
+```
+
+Visual representation:
+
+```text
+Broker 2  -> Leader
+Broker 4  -> Follower
+Broker 5  -> Follower
+```
+
+---
+
+## 8.3 Partition 2
+
+```text
+customer-events::partition-2
+
+Leader:   Broker 3
+Replicas: Broker 3, Broker 2, Broker 1
+```
+
+Visual representation:
+
+```text
+Broker 3  -> Leader
+Broker 2  -> Follower
+Broker 1  -> Follower
+```
+
+---
+
+# 9. Leader, Follower, and ISR
+
+## 9.1 Leader Replica
+
+Each partition has exactly one leader replica at a given time.
+
+The leader handles:
+
+```text
+Producer writes
+Consumer reads
+Replication coordination
+```
+
+Example:
+
+```text
+Producer -> Partition Leader -> Followers
+```
+
+---
+
+## 9.2 Follower Replica
+
+Follower replicas copy data from the leader.
+
+Followers do not normally serve client reads and writes in the standard Kafka model. Their main responsibility is to stay synchronized with the leader.
+
+---
+
+## 9.3 ISR: In-Sync Replicas
+
+ISR means:
+
+```text
+In-Sync Replicas
+```
+
+ISR is the set of replicas that are sufficiently up-to-date with the leader.
+
+Example:
+
+```text
+Replicas: [Broker 1, Broker 3, Broker 5]
+ISR:      [Broker 1, Broker 5]
+```
+
+This means Broker 3 is a replica, but it is not currently considered in-sync.
+
+A replica can fall out of ISR if it lags behind the leader for too long.
+
+A related broker configuration is:
+
+```properties
+replica.lag.time.max.ms=30000
+```
+
+This means that if a follower replica does not catch up within the configured time window, it may be removed from the ISR.
+
+---
+
+# 10. Producer Acknowledgement Semantics
+
+## 10.1 Producer Write Flow
+
+The producer writes to the leader replica of the target partition:
+
+```text
+Producer -> Leader Replica -> Follower Replicas
+```
+
+Replication from leader to followers is asynchronous from the perspective of the distributed system, but producer acknowledgement behavior depends on the `acks` setting.
+
+---
+
+## 10.2 acks=all
+
+For stronger durability, producers can use:
+
+```properties
+acks=all
+```
+
+With `acks=all`, the producer receives an acknowledgement only after the record has been written to the leader and replicated to the required in-sync replicas.
+
+The effective durability also depends on:
+
+```properties
+min.insync.replicas
+```
+
+For example:
+
+```properties
+acks=all
+min.insync.replicas=2
+```
+
+This means the write is considered successful only if the leader and at least one additional in-sync replica can acknowledge the record.
+
+---
+
+## 10.3 Why ISR Matters
+
+If acknowledgement comes only after successful replication to the required ISR members, the data is more reliable.
+
+Conceptually:
+
+```text
+Producer
+   |
+   v
+Partition Leader
+   |
+   v
+ISR Replicas
+   |
+   v
+ACK returned to producer
+```
+
+If too few ISR replicas are available, Kafka may reject the write instead of accepting a record that cannot meet the durability requirement.
+
+This is a key mechanism for balancing availability and consistency.
+
+---
+
+# 11. Important Replication-Related Broker Settings
+
+Kafka exposes several settings related to replication behavior. For introductory purposes, the most important ones are:
+
+```properties
+default.replication.factor=3
+min.insync.replicas=2
+replica.lag.time.max.ms=30000
+replica.fetch.backoff.ms=1000
+replica.fetch.max.bytes=1048576
+replica.fetch.min.bytes=1
+replica.fetch.wait.max.ms=500
+```
+
+Explanation:
+
+| Setting                      | Meaning                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `default.replication.factor` | Default number of replicas for new topics                                     |
+| `min.insync.replicas`        | Minimum number of ISR replicas required for successful writes when `acks=all` |
+| `replica.lag.time.max.ms`    | Maximum time a follower may lag before being removed from ISR                 |
+| `replica.fetch.backoff.ms`   | Backoff interval used by followers when fetching from leaders                 |
+| `replica.fetch.max.bytes`    | Maximum bytes fetched by a replica in one request                             |
+| `replica.fetch.min.bytes`    | Minimum data size the follower tries to fetch                                 |
+| `replica.fetch.wait.max.ms`  | Maximum wait time for replica fetch responses                                 |
+
+For most demo scenarios, the default Kafka values are sufficient. The key settings to understand are:
+
+```properties
+default.replication.factor=3
+min.insync.replicas=2
+acks=all
+```
+
+---
+
+# 12. Consumer Groups
+
+Kafka consumers usually work as members of a consumer group.
+
+A consumer group allows multiple consumers to share the work of reading from a topic.
+
+Example:
+
+```text
+Topic: customer-events
+Partitions: 3
+
+Consumer Group: customer-service-projection
+ ├── Consumer A -> partition-0
+ ├── Consumer B -> partition-1
+ └── Consumer C -> partition-2
+```
+
+A partition can be consumed by only one consumer within the same consumer group at a time.
+
+If there are more consumers than partitions, some consumers will remain idle.
+
+If there are fewer consumers than partitions, some consumers will process multiple partitions.
+
+---
+
+## 12.1 Consumer Offsets
+
+Kafka tracks the position of each consumer group using offsets.
+
+An offset identifies the position of a record inside a partition.
+
+Example:
+
+```text
+customer-events / partition-0 / offset-42
+```
+
+The consumer group stores committed offsets so that it can continue processing from the correct position after a restart.
+
+Important offset-related settings include:
+
+```properties
+offsets.topic.replication.factor=3
+offsets.retention.minutes=10080
+offsets.commit.timeout.ms=5000
+```
+
+---
+
+## 12.2 Rebalancing
+
+When consumers join or leave a consumer group, Kafka performs a rebalance.
+
+During a rebalance, partitions are reassigned among available consumers.
+
+Relevant settings include:
+
+```properties
+group.initial.rebalance.delay.ms=0
+group.consumer.heartbeat.interval.ms=5000
+group.consumer.session.timeout.ms=45000
+```
+
+For demo purposes, setting `group.initial.rebalance.delay.ms=0` allows the group to start consuming more quickly.
+
+---
+
+# 13. WebSocket, SSE, and Messaging Systems
+
+Real-time systems can use different communication models depending on the direction and nature of data flow.
+
+## 13.1 WebSocket
+
+WebSocket provides bidirectional communication:
+
+```text
+Client <----> Server
+```
+
+It supports:
+
+```text
+Text messages
+Binary messages
+Streaming-like interaction
+Real-time communication
+```
+
+Typical clients:
+
+```text
+Web browser
+Mobile application
+CLI client
+Desktop application
+```
+
+WebSocket is useful when both sides need to send data at any time.
+
+Example use cases:
+
+```text
+Chat applications
+Trading dashboards
+Collaborative editing
+Real-time monitoring
+Multiplayer games
+```
+
+---
+
+## 13.2 Server-Sent Events
+
+Server-Sent Events, or SSE, provide one-way communication from server to client:
+
+```text
+Server ----> Client
+```
+
+SSE is usually text-based and commonly uses JSON payloads.
+
+Example use cases:
+
+```text
+Notification streams
+Live status updates
+Progress updates
+Monitoring dashboards
+```
+
+SSE is simpler than WebSocket when the client only needs to receive updates from the server.
+
+---
+
+## 13.3 Push Notification
+
+Push notification is used when the server needs to notify a user or device, often through platform-specific infrastructure.
+
+Example use cases:
+
+```text
+Mobile app notification
+Browser notification
+System alert
+```
+
+---
+
+## 13.4 Messaging Systems
+
+Messaging systems decouple producers and consumers.
+
+Examples:
+
+```text
+Apache Kafka
+RabbitMQ
+ZeroMQ
+```
+
+Kafka is especially strong for:
+
+```text
+High-throughput event streaming
+Durable event logs
+Replayable events
+Partitioned scalability
+Consumer-group-based parallel processing
+Event-driven microservices
+```
+
+---
+
+# 14. Kafka in Event-Driven Architecture
+
+Kafka is commonly used as the backbone of event-driven systems.
+
+A typical event-driven flow is:
+
+```text
+Command
+   |
+   v
+Aggregate
+   |
+   v
+Domain Event
+   |
+   v
+Kafka Topic
+   |
+   v
+Consumer / Projection / Integration Handler
+```
+
+Example:
+
+```text
+ChangeCustomerAddress command
+   |
+   v
+Customer aggregate validates the change
+   |
+   v
+CustomerAddressChanged event is produced
+   |
+   v
+Event is published to customer-events topic
+   |
+   v
+Other services consume the event
+```
+
+Possible consumers:
+
+```text
+Customer read-model projection
+Notification service
+Audit service
+CRM integration service
+Analytics pipeline
+```
+
+---
+
+# 15. Recommended Kafka Message Design for Domain Events
+
+A customer event should include metadata and payload.
+
+Example:
+
+```json
+{
+  "eventId": "evt-1001",
+  "eventType": "CustomerAddressChanged",
+  "aggregateType": "Customer",
+  "aggregateId": "cust-123",
+  "occurredAt": "2026-06-25T12:30:00Z",
+  "version": 7,
+  "payload": {
+    "street": "Example Street",
+    "city": "Istanbul",
+    "country": "Türkiye"
+  }
+}
+```
+
+Recommended Kafka key:
+
+```text
+aggregateId
+```
+
+For customer events:
+
+```text
+key = customerId
+```
+
+This preserves event ordering per customer because Kafka sends records with the same key to the same partition.
+
+---
+
+# 16. Demo Summary
+
+In this demo, we built a Kafka cluster with:
+
+```text
+3 controllers
+5 brokers
+3 partitions
+replication factor = 3
+acks = all
+```
+
+The key architectural ideas are:
+
+```text
+Controllers manage metadata.
+Brokers store and replicate data.
+Topics are split into partitions.
+Partitions are replicated across brokers.
+Each partition has one leader.
+Followers replicate from the leader.
+ISR defines which replicas are sufficiently synchronized.
+acks=all improves producer-side durability.
+Consumer groups provide scalable event consumption.
+Kafka can serve as the event backbone of a DDD-oriented architecture.
+```
+
+From a DDD perspective, Kafka should not be treated merely as a technical queue. It is part of the integration and eventing infrastructure that carries meaningful domain events between bounded contexts and downstream consumers.
+
 For local training, a standalone Kafka server is sufficient.
 
 For production-grade deployment, Kafka should be deployed as a multi-node cluster with multiple brokers, replicated partitions, and an odd number of controllers such as 3 or 5 depending on the desired fault tolerance level.
