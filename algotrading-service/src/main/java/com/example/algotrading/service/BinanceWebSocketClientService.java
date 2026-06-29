@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.CloseStatus;
@@ -25,7 +27,9 @@ public class BinanceWebSocketClientService implements WebSocketHandler {
 	private static final String EXCHANGE_INFO_URL = "https://api.binance.com/api/v3/exchangeInfo?symbolStatus=TRADING";
 
 	private static final String BINANCE_COMBINED_STREAM_URL = "wss://stream.binance.com:9443/stream?streams=%s";
-	private final RestClient restClient;
+    private static final Logger log = LoggerFactory.getLogger(BinanceWebSocketClientService.class);
+
+    private final RestClient restClient;
 
 	private final WebSocketClient webSocketClient;
 	private final ObjectMapper objectMapper;
@@ -34,7 +38,6 @@ public class BinanceWebSocketClientService implements WebSocketHandler {
 	public BinanceWebSocketClientService(WebSocketClient webSocketClient, ObjectMapper objectMapper,
 			KafkaTradeEventProducer producer) {
 		this.restClient = RestClient.create();
-		;
 		this.webSocketClient = webSocketClient;
 		this.objectMapper = objectMapper;
 		this.producer = producer;
@@ -55,28 +58,27 @@ public class BinanceWebSocketClientService implements WebSocketHandler {
 		for (var batch : batches) {
 			var combinedStreams = String.join("/", batch);
 			var url = BINANCE_COMBINED_STREAM_URL.formatted(combinedStreams);
-			System.out.println(url);
-
+			log.info("{}", url);
 			webSocketClient.execute(this, url);
 		}
 
-		System.out.printf("Subscribed to %d Binance trade streams using %d WebSocket connection(s).%n", streams.size(),
+		log.info("Subscribed to Binance trade streams using {} WebSocket connection(s).{}", streams.size(),
 				batches.size());
 	}
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-		System.err.println("Connected to the binance server!");
+		log.info("Connected to the binance server!");
 
 	}
 
 	@Override
 	public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
 		var tradeEventAsJson = message.getPayload().toString();
-		System.out.println(tradeEventAsJson);
+		log.trace("{}",tradeEventAsJson);
 		var streamEvent = objectMapper.readValue(tradeEventAsJson, StreamEvent.class);
 		var tradeEvent = streamEvent.data();
-		System.out.println(tradeEvent);
+		log.trace("{}",tradeEvent);
 		producer.send(tradeEvent);
 	}
 
@@ -104,8 +106,7 @@ public class BinanceWebSocketClientService implements WebSocketHandler {
 
 		return exchangeInfo.symbols().stream().filter(Objects::nonNull)
 				.filter(symbol -> "TRADING".equals(symbol.status())).filter(BinanceSymbol::isSpotTradingAllowed)
-				.limit(200)
-				.map(BinanceSymbol::symbol).filter(Objects::nonNull).distinct().sorted().toList();
+				.limit(200).map(BinanceSymbol::symbol).filter(Objects::nonNull).distinct().sorted().toList();
 	}
 
 	private String toTradeStreamName(String symbol) {

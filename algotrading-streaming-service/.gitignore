@@ -1,0 +1,9 @@
+target/
+.kafka-streams-state/
+kafka-streams-state/
+*.log
+*.iml
+.idea/
+.classpath
+.project
+.settings/
