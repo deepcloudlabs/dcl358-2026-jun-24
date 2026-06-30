@@ -57,7 +57,13 @@ public class MarketAnalyticsTopology {
                 .selectKey((_, trade) -> trade.symbol().toUpperCase(Locale.ROOT));
 
         trades.to(properties.getValidatedTradesTopic(), Produced.with(stringSerde, tradeSerde));
-
+        // Hopping Window
+        // 10:19-10:29
+        // 10:29:10:39
+        // Tumbling window
+        // 10:19-10:29
+        // 10:21-10:31
+        
         KTable<Windowed<String>, Candle> oneMinuteCandles = trades
                 .groupByKey(Grouped.with(stringSerde, tradeSerde))
                 .windowedBy(TimeWindows.ofSizeAndGrace(properties.getCandleWindow(), properties.getWindowGrace()))
@@ -73,7 +79,7 @@ public class MarketAnalyticsTopology {
                 .map((windowedSymbol, candle) -> KeyValue.pair(
                         windowedSymbol.key(),
                         candle.withWindow(windowedSymbol.window().start(), windowedSymbol.window().end())))
-                .peek((symbol, candle) -> log.debug("1m candle {} {}", symbol, candle.getClose()))
+                .peek((symbol, candle) -> log.info("1m candle {} {}", symbol, candle.getClose()))
                 .to(properties.getCandleTopic(), Produced.with(stringSerde, candleSerde));
 
         oneMinuteCandles
@@ -102,7 +108,7 @@ public class MarketAnalyticsTopology {
                 .map((windowedSymbol, vwapWindow) -> KeyValue.pair(
                         windowedSymbol.key(),
                         vwapWindow.withWindow(windowedSymbol.window().start(), windowedSymbol.window().end())))
-                .peek((symbol, vwapWindow) -> log.debug("5m VWAP {} {}", symbol, vwapWindow.getVwap()))
+                .peek((symbol, vwapWindow) -> log.info("5m VWAP {} {}", symbol, vwapWindow.getVwap()))
                 .to(properties.getVwapTopic(), Produced.with(stringSerde, vwapSerde));
 
         return rawTrades;

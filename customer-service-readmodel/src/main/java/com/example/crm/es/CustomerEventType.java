@@ -1,0 +1,9 @@
+package com.example.crm.es;
+
+public enum CustomerEventType {
+    CUSTOMER_CREATED,
+    CUSTOMER_FULLNAME_CHANGED,
+    CUSTOMER_ADDRESS_CHANGED,
+    CUSTOMER_PHONE_CHANGED,
+    CUSTOMER_REMOVED
+}

@@ -1,5 +1,6 @@
 package com.example.algotrading.streaming.model;
 
+// VWAP (Volume-Weighted Average Price)
 public class Candle {
     private String symbol;
     private long windowStart;
