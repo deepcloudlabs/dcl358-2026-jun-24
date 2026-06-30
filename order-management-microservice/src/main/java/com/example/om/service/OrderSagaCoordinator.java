@@ -118,6 +118,7 @@ public class OrderSagaCoordinator {
         if (reply.status() == InventoryStatus.REJECTED && order.is(OrderStatus.PENDING_INVENTORY)) {
             order.mark(OrderStatus.INVENTORY_REJECTED);
             order.mark(OrderStatus.COMPENSATING_PAYMENT);
+            // Compensation
             publishPaymentCommand(order, PaymentCommandType.REFUND);
             publishLifecycleEvent(order, OrderLifecycleEventType.COMPENSATION_STARTED,
                     "Inventory rejected; refunding payment. Reason: %s".formatted(reply.reason()));
