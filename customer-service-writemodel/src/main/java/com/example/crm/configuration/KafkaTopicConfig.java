@@ -9,9 +9,11 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaTopicConfig {
     @Bean
-    NewTopic customerEventsTopic(@Value("${app.kafka.customer-events-topic:crm-es-events}") String topicName) {
+    NewTopic customerEventsTopic(
+    		@Value("${app.kafka.customer-events-topic:crm-es-events}") String topicName,
+    		@Value("${app.kafka.customer-events-partitions:3}") int numOfPartitions) {
         return TopicBuilder.name(topicName)
-                .partitions(3)
+                .partitions(numOfPartitions)
                 .replicas(1)
                 .build();
     }

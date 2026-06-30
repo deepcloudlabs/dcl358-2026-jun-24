@@ -24,6 +24,7 @@ public class CustomerQueryRestController {
         this.customerQueryService = customerQueryService;
     }
 
+    // Query
     @GetMapping("{identity}")
     public CustomerDocumentDto getCustomerById(@PathVariable String identity) {
         return customerQueryService.findById(identity);

@@ -17,8 +17,6 @@ import com.example.crm.dto.response.DeleteCustomerResponse;
 import com.example.crm.dto.response.UpdateCustomerResponse;
 import com.example.crm.service.CustomerService;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequestMapping("/customers")
 @CrossOrigin
@@ -29,15 +27,15 @@ public class CustomerRestController {
     public CustomerRestController(CustomerService customerService) {
         this.customerService = customerService;
     }
-
+    // Commands
     @PostMapping
-    public CreateCustomerResponse createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
+    public CreateCustomerResponse createCustomer(@Validated @RequestBody CreateCustomerRequest request) {
         return customerService.acquireCustomer(request);
     }
 
     @PutMapping("{identity}")
     public UpdateCustomerResponse updateCustomer(@PathVariable String identity,
-            @Valid @RequestBody UpdateCustomerRequest request) {
+            @Validated @RequestBody UpdateCustomerRequest request) {
         return customerService.updateCustomer(identity, request);
     }
 
