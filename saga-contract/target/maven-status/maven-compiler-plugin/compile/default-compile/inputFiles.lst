@@ -1,0 +1,16 @@
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\InventoryCommand.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\InventoryCommandType.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\InventoryReply.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\InventoryStatus.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\OrderItemMessage.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\OrderLifecycleEvent.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\OrderLifecycleEventType.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\PaymentCommand.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\PaymentCommandType.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\PaymentReply.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\PaymentStatus.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\SagaTopics.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\ShippingCommand.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\ShippingCommandType.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\ShippingReply.java
+D:\var\repositories\dcl358-2024-oct-14\saga-contract\src\main\java\com\example\saga\contract\ShippingStatus.java

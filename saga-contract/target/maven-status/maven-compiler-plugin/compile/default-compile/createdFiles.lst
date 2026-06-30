@@ -1,0 +1,16 @@
+com\example\saga\contract\InventoryReply.class
+com\example\saga\contract\InventoryCommand.class
+com\example\saga\contract\ShippingCommandType.class
+com\example\saga\contract\ShippingCommand.class
+com\example\saga\contract\PaymentCommand.class
+com\example\saga\contract\PaymentCommandType.class
+com\example\saga\contract\OrderLifecycleEvent.class
+com\example\saga\contract\PaymentStatus.class
+com\example\saga\contract\PaymentReply.class
+com\example\saga\contract\OrderLifecycleEventType.class
+com\example\saga\contract\ShippingStatus.class
+com\example\saga\contract\InventoryCommandType.class
+com\example\saga\contract\ShippingReply.class
+com\example\saga\contract\InventoryStatus.class
+com\example\saga\contract\SagaTopics.class
+com\example\saga\contract\OrderItemMessage.class

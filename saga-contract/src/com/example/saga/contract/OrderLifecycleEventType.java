@@ -1,0 +1,12 @@
+package com.example.saga.contract;
+
+public enum OrderLifecycleEventType {
+    ORDER_CREATED,
+    PAYMENT_AUTHORIZED,
+    INVENTORY_RESERVED,
+    SHIPMENT_CREATED,
+    ORDER_COMPLETED,
+    ORDER_CANCELED,
+    COMPENSATION_STARTED,
+    COMPENSATION_COMPLETED
+}
